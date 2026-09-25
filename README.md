@@ -29,7 +29,7 @@ Each figure is the limit closest to running out. By default it turns amber at 75
 - **Left-click:** every limit, with reset times.
 - **Right-click:** Refresh now, Settings, Exit. Running `TokenGauge.exe` again also opens Settings.
 
-Settings apply immediately and are saved to `%APPDATA%\TokenGauge\settings.json`. They cover, per tool: show or hide, check interval (defaults: Claude 2 min, Copilot 5, Codex 1) and setup buttons. Also the colour thresholds, position and Start with Windows.
+Settings apply immediately and are saved to `%APPDATA%\TokenGauge\settings.json`. They cover, per tool: show or hide, check interval (defaults: Claude and Copilot 5 min, Codex 1) and setup buttons. Also the colour thresholds, position and Start with Windows.
 
 ## How it works
 

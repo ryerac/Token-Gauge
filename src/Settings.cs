@@ -17,8 +17,8 @@ public sealed class Settings
     public static readonly string FilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TokenGauge", "settings.json");
 
-    /// <summary>The 5-hour window moves quickly, and it's one small request.</summary>
-    public ToolSettings Claude { get; set; } = new(120);
+    /// <summary>Gentle enough to stay clear of the endpoint's rate limit, which Claude Code's /usage also counts against.</summary>
+    public ToolSettings Claude { get; set; } = new(300);
 
     /// <summary>The quota is monthly, and each check also runs gh, so slower is fine.</summary>
     public ToolSettings Copilot { get; set; } = new(300);
