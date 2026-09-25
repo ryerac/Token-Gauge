@@ -15,6 +15,10 @@ public sealed class ClaudeProvider(HttpClient http, ToolSettings settings) : IUs
     static readonly string CredentialsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", ".credentials.json");
 
+    static readonly TimeSpan MaxBackoff = TimeSpan.FromMinutes(30);
+
+    int _rateLimitedCount;
+
     public string Name => "Claude";
     public ToolSettings Settings => settings;
     public TimeSpan Interval => TimeSpan.FromSeconds(Math.Max(60, settings.IntervalSeconds));
@@ -47,12 +51,34 @@ public sealed class ClaudeProvider(HttpClient http, ToolSettings settings) : IUs
         if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
             return UsageSnapshot.Failed(Name, UsageStatus.Stale, "Login was rejected. Using Claude Code will renew it.",
                 SetupAction.SignInClaude);
-        if (response.StatusCode == HttpStatusCode.TooManyRequests)
-            return UsageSnapshot.Failed(Name, UsageStatus.Stale, "Usage check was rate limited. Will retry.");
+        if (response.StatusCode == HttpStatusCode.TooManyRequests) return RateLimited(response);
         response.EnsureSuccessStatusCode();
+        _rateLimitedCount = 0;
 
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
         return new UsageSnapshot(Name, UsageStatus.Ok, Parse(doc.RootElement), DateTimeOffset.Now);
+    }
+
+    /// <summary>
+    /// Waits as long as the server asks, or otherwise doubles the wait on each consecutive refusal (up to 30 minutes),
+    /// so repeated checks don't keep the limit in place.
+    /// </summary>
+    UsageSnapshot RateLimited(HttpResponseMessage response)
+    {
+        _rateLimitedCount++;
+        var now = DateTimeOffset.Now;
+        var requested = response.Headers.RetryAfter switch
+        {
+            { Delta: { } delta } => delta,
+            { Date: { } date } => date - now,
+            _ => (TimeSpan?)null,
+        };
+        var backoff = TimeSpan.FromTicks(Interval.Ticks << Math.Min(_rateLimitedCount, 4));
+        var wait = TimeSpan.FromTicks(Math.Clamp((requested ?? backoff).Ticks, Interval.Ticks, MaxBackoff.Ticks));
+
+        return UsageSnapshot.Failed(Name, UsageStatus.Stale,
+            $"Claude's usage check is rate limited. Trying again at {Theme.When(now + wait, now)}.",
+            retryAfter: wait);
     }
 
     UsageSnapshot NotSignedIn() => ToolLocator.ClaudeCode() is null

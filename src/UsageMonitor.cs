@@ -10,6 +10,9 @@ public sealed class UsageMonitor : IDisposable
     {
         public ServiceState State { get; } = state;
         public DateTimeOffset LastRun { get; set; } = DateTimeOffset.MinValue;
+
+        /// <summary>Set when a service asks us to back off; scheduled checks wait until then.</summary>
+        public DateTimeOffset NotBefore { get; set; } = DateTimeOffset.MinValue;
         public bool FetchNow { get; set; }
         public CancellationTokenSource? Sleep { get; set; }
     }
@@ -58,7 +61,8 @@ public sealed class UsageMonitor : IDisposable
         while (!_cts.IsCancellationRequested)
         {
             var enabled = provider.Settings.Enabled;
-            if (enabled && (item.FetchNow || DateTimeOffset.UtcNow - item.LastRun >= provider.Interval))
+            var due = Max(item.LastRun + provider.Interval, item.NotBefore);
+            if (enabled && (item.FetchNow || DateTimeOffset.UtcNow >= due))
             {
                 item.FetchNow = false;
                 item.LastRun = DateTimeOffset.UtcNow;
@@ -66,7 +70,7 @@ public sealed class UsageMonitor : IDisposable
                 continue;
             }
 
-            var wait = enabled ? item.LastRun + provider.Interval - DateTimeOffset.UtcNow : Timeout.InfiniteTimeSpan;
+            var wait = enabled ? due - DateTimeOffset.UtcNow : Timeout.InfiniteTimeSpan;
             if (wait < TimeSpan.Zero && wait != Timeout.InfiniteTimeSpan) wait = TimeSpan.Zero;
 
             using var sleep = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
@@ -94,10 +98,13 @@ public sealed class UsageMonitor : IDisposable
             snapshot = UsageSnapshot.Failed(provider.Name, UsageStatus.Error, ex.Message);
         }
 
+        item.NotBefore = snapshot.RetryAfter is { } retryAfter ? DateTimeOffset.UtcNow + retryAfter : DateTimeOffset.MinValue;
         item.State.Latest = snapshot;
         if (snapshot.Status == UsageStatus.Ok) item.State.LastGood = snapshot;
         Changed?.Invoke();
     }
+
+    static DateTimeOffset Max(DateTimeOffset a, DateTimeOffset b) => a > b ? a : b;
 
     public void Dispose() => _cts.Cancel();
 }

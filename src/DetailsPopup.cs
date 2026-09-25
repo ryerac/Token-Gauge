@@ -119,6 +119,16 @@ internal sealed class DetailsPopup : Form
             TextRenderer.DrawText(g, text, font, new Rectangle(pad, top, inner, font.Height), color, flags);
         }
 
+        // Status messages can be long, so they wrap onto extra lines; returns the height used.
+        int Wrapped(string text, Font font, Color color, int top)
+        {
+            const TextFormatFlags flags = TextFormatFlags.NoPadding | TextFormatFlags.WordBreak | TextFormatFlags.Left;
+            var size = TextRenderer.MeasureText(text, font, new Size(inner, int.MaxValue), flags);
+            if (g is not null)
+                TextRenderer.DrawText(g, text, font, new Rectangle(pad, top, inner, size.Height), color, flags);
+            return size.Height;
+        }
+
         for (var i = 0; i < _states.Count; i++)
         {
             var state = _states[i];
@@ -174,13 +184,11 @@ internal sealed class DetailsPopup : Form
             if (problem is not null)
             {
                 var color = state.Latest!.Status == UsageStatus.NotConfigured ? palette.Dim : palette.Amber;
-                Text(state.IsStale ? $"Showing last reading. {problem}" : problem, small, color, y);
-                y += small.Height + S(10);
+                y += Wrapped(state.IsStale ? $"Showing last reading. {problem}" : problem, small, color, y) + S(10);
             }
             else if (info is not null)
             {
-                Text(info, small, palette.Dim, y);
-                y += small.Height + S(10);
+                y += Wrapped(info, small, palette.Dim, y) + S(10);
             }
         }
 

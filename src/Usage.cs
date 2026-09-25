@@ -18,10 +18,12 @@ public sealed record UsageSnapshot(
     IReadOnlyList<UsageWindow> Windows,
     DateTimeOffset FetchedAt,
     string? Message = null,
-    SetupAction Setup = SetupAction.None)
+    SetupAction Setup = SetupAction.None,
+    TimeSpan? RetryAfter = null)
 {
-    public static UsageSnapshot Failed(string service, UsageStatus status, string message, SetupAction setup = SetupAction.None) =>
-        new(service, status, [], DateTimeOffset.Now, message, setup);
+    public static UsageSnapshot Failed(string service, UsageStatus status, string message,
+        SetupAction setup = SetupAction.None, TimeSpan? retryAfter = null) =>
+        new(service, status, [], DateTimeOffset.Now, message, setup, retryAfter);
 
     /// <summary>The window closest to its limit, which is what the taskbar shows.</summary>
     public UsageWindow? Headline(DateTimeOffset now) =>
