@@ -21,7 +21,7 @@ Local builds don't need a tag and don't create anything on GitHub.
 
 ## Continuous integration
 
-[The CI workflow](../.github/workflows/ci.yml) runs for pull requests and pushes to `main`. It builds the solution and publishes the single-file executable. The executable is attached to the run as an artifact for 14 days, so any commit on `main` can be downloaded and tried from the run's **Summary** page.
+[The CI workflow](../.github/workflows/ci.yml) runs for pull requests and pushes to `main`. It builds the solution and publishes the single-file executable. The executable is attached to the run for 14 days (as `TokenGauge.exe` itself, not a zip), so any commit on `main` can be downloaded and tried from the run's **Summary** page.
 
 A green CI run means the commit compiles and publishes. It doesn't create a release.
 
