@@ -8,6 +8,8 @@ internal static class Startup
     const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     const string RunValue = "TokenGauge";
 
+    static string Command => $"\"{Environment.ProcessPath}\"";
+
     public static bool IsEnabled
     {
         get
@@ -18,8 +20,16 @@ internal static class Startup
         set
         {
             using var key = Registry.CurrentUser.CreateSubKey(RunKey);
-            if (value) key.SetValue(RunValue, $"\"{Environment.ProcessPath}\"");
+            if (value) key.SetValue(RunValue, Command);
             else key.DeleteValue(RunValue, throwOnMissingValue: false);
         }
+    }
+
+    /// <summary>If Start with Windows is on but points at an old location, points it at this exe instead.</summary>
+    public static void UpdatePathIfMoved()
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true);
+        if (key?.GetValue(RunValue) is string current && !string.Equals(current, Command, StringComparison.OrdinalIgnoreCase))
+            key.SetValue(RunValue, Command);
     }
 }

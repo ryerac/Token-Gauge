@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace TokenGauge;
 
@@ -37,6 +38,10 @@ public sealed class Settings
     /// <summary>If set, places the strip this far from the right edge of the taskbar instead of next to the tray.</summary>
     public int? OffsetFromRightPx { get; set; }
 
+    /// <summary>True when no settings file existed yet, i.e. the first time TokenGauge runs for this user.</summary>
+    [JsonIgnore]
+    public bool IsFirstRun { get; private set; }
+
     static readonly JsonSerializerOptions Options = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
 
     public static Settings Load()
@@ -51,7 +56,7 @@ public sealed class Settings
             return new Settings();
         }
 
-        var defaults = new Settings();
+        var defaults = new Settings { IsFirstRun = true };
         defaults.Save();
         return defaults;
     }

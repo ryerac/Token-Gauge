@@ -6,9 +6,15 @@ Shows your Claude, GitHub Copilot and Codex usage limits on the Windows 11 taskb
 
 ## Install
 
-Download `TokenGauge.exe` from the [latest release](https://github.com/ryerac/Token-Gauge/releases/latest) and run it. It's a single self-contained file; no installer or .NET needed. Or [build it yourself](#build). Tick **Start with Windows** in Settings to keep it running.
+Download `TokenGauge.exe` from the [latest release](https://github.com/ryerac/Token-Gauge/releases/latest), or [build it yourself](#build). It's a single self-contained file for Windows 11; no installer or .NET needed.
 
-Requires Windows 11. Each tool appears once it's set up:
+1. Put it somewhere permanent, such as `C:\Tools\TokenGauge\`, rather than Downloads. Start with Windows runs it from wherever it is.
+2. The exe isn't code-signed, so Windows may block it. Either right-click it → **Properties** → tick **Unblock** → **OK**, or run `Unblock-File C:\Tools\TokenGauge\TokenGauge.exe` in PowerShell. If SmartScreen still says "Windows protected your PC", click **More info** → **Run anyway**.
+3. Run it. The first time, Settings opens so you can set up tools and tick **Start with Windows**.
+
+If you move the exe later, run it once from the new location and Start with Windows follows it.
+
+Each tool appears once it's set up:
 
 - **Claude:** signed in to Claude Code.
 - **Copilot:** the [GitHub CLI](https://cli.github.com/), signed in. Settings can install it and sign in for you.
@@ -18,7 +24,7 @@ You don't need all three. Tools you don't use simply don't appear, so if you onl
 
 ## Use
 
-Each figure is the limit closest to running out. It turns amber at 75% and red at 90%, and `?` means the last check failed so you're seeing the previous reading.
+Each figure is the limit closest to running out. By default it turns amber at 75% and red at 90%, and `?` means the last check failed so you're seeing the previous reading.
 
 - **Left-click:** every limit, with reset times.
 - **Right-click:** Refresh now, Settings, Exit. Running `TokenGauge.exe` again also opens Settings.

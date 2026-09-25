@@ -46,6 +46,10 @@ internal sealed class GaugeContext : ApplicationContext
         Render();
         _timer.Start();
         _monitor.Start();
+
+        Startup.UpdatePathIfMoved();
+        // First run: open Settings so the setup buttons and Start with Windows are easy to find.
+        if (_settings.IsFirstRun) _ui.Post(_ => OpenSettings(), null);
     }
 
     /// <summary>Tools the user wants shown and that a check has confirmed are set up.</summary>
