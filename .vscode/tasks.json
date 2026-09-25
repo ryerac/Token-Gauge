@@ -1,0 +1,62 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      // TokenGauge is single-instance and a running copy locks its exe, so close it before building or debugging.
+      "label": "stop TokenGauge",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-Command", "Stop-Process -Name TokenGauge -ErrorAction SilentlyContinue; exit 0"],
+      "presentation": { "reveal": "silent", "close": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "build",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}/TokenGauge.slnx",
+        "-c",
+        "Debug",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "dependsOn": "stop TokenGauge",
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "silent" },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "build release",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}/TokenGauge.slnx",
+        "-c",
+        "Release",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "dependsOn": "stop TokenGauge",
+      "group": "build",
+      "presentation": { "reveal": "silent" },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      // Builds Release and starts it detached, like a normal install. Closing VS Code leaves it running.
+      "label": "run release",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "Start-Process '${workspaceFolder}\\src\\bin\\Release\\net10.0-windows\\TokenGauge.exe'"
+      ],
+      "dependsOn": "build release",
+      "presentation": { "reveal": "silent" },
+      "problemMatcher": []
+    }
+  ]
+}
