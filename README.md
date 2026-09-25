@@ -29,6 +29,8 @@ dotnet build src -c Release
 .\src\bin\Release\net10.0-windows\TokenGauge.exe
 ```
 
+Released versions are a single self-contained `TokenGauge.exe` on the [Releases](https://github.com/ryerac/Token-Gauge/releases) page; no .NET install needed. See [docs/releasing.md](docs/releasing.md) for single-file builds, CI and publishing a release.
+
 ## Settings
 
 Right-click → **Settings…**. Changes apply immediately and are saved to `%APPDATA%\TokenGauge\settings.json`.

@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Validate release tag
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') {
+            throw "Release tag '$env:RELEASE_TAG' must use a format such as v1.2.3 or v1.2.3-beta.1."
+          }
+
+      - name: Publish single-file executable
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $version = $env:RELEASE_TAG.Substring(1)
+          dotnet publish .\src\TokenGauge.csproj `
+            -p:PublishProfile=win-x64-single-file `
+            -p:Version=$version `
+            -p:ContinuousIntegrationBuild=true `
+            --output .\artifacts\release
+
+      - name: Generate SHA-256 checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash .\artifacts\release\TokenGauge.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  TokenGauge.exe" | Set-Content .\artifacts\release\TokenGauge.exe.sha256 -Encoding ascii
+
+      - name: Create GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          # Tags such as v1.2.3-beta.1 are marked as pre-releases.
+          $extra = @()
+          if ($env:RELEASE_TAG -match '-') { $extra += '--prerelease' }
+          gh release create $env:RELEASE_TAG `
+            .\artifacts\release\TokenGauge.exe `
+            .\artifacts\release\TokenGauge.exe.sha256 `
+            --verify-tag `
+            --generate-notes `
+            --title "TokenGauge $env:RELEASE_TAG" `
+            @extra

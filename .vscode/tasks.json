@@ -45,6 +45,25 @@
       "problemMatcher": "$msCompile"
     },
     {
+      // Same single self-contained exe the Release workflow produces, written to artifacts\release.
+      "label": "publish single file",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "publish",
+        "${workspaceFolder}/src/TokenGauge.csproj",
+        "-p:PublishProfile=win-x64-single-file",
+        "-p:ContinuousIntegrationBuild=true",
+        "--output",
+        "${workspaceFolder}/artifacts/release",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "dependsOn": "stop TokenGauge",
+      "presentation": { "reveal": "silent" },
+      "problemMatcher": "$msCompile"
+    },
+    {
       // Builds Release and starts it detached, like a normal install. Closing VS Code leaves it running.
       "label": "run release",
       "type": "process",
