@@ -6,13 +6,15 @@ Shows your Claude, GitHub Copilot and Codex usage limits on the Windows 11 taskb
 
 ## Install
 
-Download `TokenGauge.exe` from [Releases](https://github.com/ryerac/Token-Gauge/releases) and run it. It's a single self-contained file; no installer or .NET needed. Tick **Start with Windows** in Settings to keep it running.
+Download `TokenGauge.exe` from the [latest release](https://github.com/ryerac/Token-Gauge/releases/latest) and run it. It's a single self-contained file; no installer or .NET needed. Or [build it yourself](#build). Tick **Start with Windows** in Settings to keep it running.
 
 Requires Windows 11. Each tool appears once it's set up:
 
 - **Claude:** signed in to Claude Code.
 - **Copilot:** the [GitHub CLI](https://cli.github.com/), signed in. Settings can install it and sign in for you.
 - **Codex:** used at least once (CLI or VS Code extension).
+
+You don't need all three. Tools you don't use simply don't appear, so if you only use Copilot, the taskbar just shows Copilot. You can also hide a tool in Settings.
 
 ## Use
 
