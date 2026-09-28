@@ -61,8 +61,16 @@ public sealed class CodexProvider(ToolSettings settings) : IUsageProvider
     UsageSnapshot? ReadLatest(string file)
     {
         var lines = Json.ReadShared(file).Split('\n');
+
+        // Once a limit is hit Codex stops logging figures (the last one is often 99%), but it does log the refusal.
+        DateTimeOffset? limitHitAt = null;
         for (var i = lines.Length - 1; i >= 0; i--)
         {
+            if (limitHitAt is null && lines[i].Contains("\"usage_limit_exceeded\"", StringComparison.Ordinal))
+            {
+                limitHitAt = LineTime(lines[i]) ?? new DateTimeOffset(File.GetLastWriteTimeUtc(file));
+                continue;
+            }
             if (!lines[i].Contains("\"rate_limits\"", StringComparison.Ordinal)) continue;
             try
             {
@@ -78,6 +86,12 @@ public sealed class CodexProvider(ToolSettings settings) : IUsageProvider
                 if (windows.Count == 0) continue;
 
                 var seenAt = Json.Time(doc.RootElement, "timestamp") ?? new DateTimeOffset(File.GetLastWriteTimeUtc(file));
+                if (limitHitAt is { } hitAt)
+                {
+                    var full = windows.MaxBy(w => w.Percent)!;
+                    windows[windows.IndexOf(full)] = full with { Percent = 100, Detail = "Limit reached" };
+                    seenAt = hitAt;
+                }
                 var plan = Json.Str(limits, "plan_type");
                 return new UsageSnapshot(Name, UsageStatus.Ok, windows, seenAt.ToLocalTime(),
                     plan is null ? "From Codex logs" : $"From Codex logs · {plan} plan");
@@ -88,6 +102,19 @@ public sealed class CodexProvider(ToolSettings settings) : IUsageProvider
             }
         }
         return null;
+    }
+
+    static DateTimeOffset? LineTime(string line)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(line);
+            return Json.Time(doc.RootElement, "timestamp");
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     static string Label(double? minutes) => minutes switch
