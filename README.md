@@ -24,12 +24,17 @@ You don't need all three. Tools you don't use simply don't appear, so if you onl
 
 ## Use
 
+> I wouldn't recommend moving Claude below 5min or you may get rate limited on the API.
+
 Each figure is the limit closest to running out. By default it turns amber at 75% and red at 90%, and `?` means the last check failed so you're seeing the previous reading.
 
 - **Left-click:** every limit, with reset times.
 - **Right-click:** Refresh now, Settings, Exit. Running `TokenGauge.exe` again also opens Settings.
 
 Settings apply immediately and are saved to `%APPDATA%\TokenGauge\settings.json`. They cover, per tool: show or hide, check interval (defaults: Claude and Copilot 5 min, Codex 1) and setup buttons. Also the colour thresholds, position and Start with Windows.
+
+## Warranty
+None. YMMV. The only issue I encountered was a rate limiting response from Claude if I went below 5 minutes.
 
 ## How it works
 
