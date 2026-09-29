@@ -16,6 +16,11 @@ internal static class Json
             ? v.GetDouble()
             : null;
 
+    public static bool? Bool(JsonElement o, string name) =>
+        o.ValueKind == JsonValueKind.Object && o.TryGetProperty(name, out var v) && v.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? v.GetBoolean()
+            : null;
+
     public static JsonElement? Obj(JsonElement o, string name) =>
         o.ValueKind == JsonValueKind.Object && o.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Object
             ? v

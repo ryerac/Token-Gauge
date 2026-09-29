@@ -40,32 +40,59 @@ public sealed class CopilotProvider(HttpClient http, ToolSettings settings) : IU
 
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
         var root = doc.RootElement;
-        var windows = Parse(root);
-        var message = windows.Count == 0 ? "No limited quotas on this plan." : null;
+        var (windows, payAsYouGo) = Parse(root);
+        var message = windows.Count > 0 ? null : payAsYouGo ?? "No limited quotas on this plan.";
         return new UsageSnapshot(Name, UsageStatus.Ok, windows, DateTimeOffset.Now, message);
     }
 
-    static List<UsageWindow> Parse(JsonElement root)
+    /// <summary>
+    /// Since June 2026 Copilot bills in AI credits (1 credit = $0.01). <c>entitlement</c> is the seat's allowance,
+    /// including any extra spend an admin has approved; <c>overage_entitlement</c> is a further budget on top of it.
+    /// With overage allowed and no budget, usage can run past the allowance, which <c>overage_count</c> tracks.
+    /// </summary>
+    static (List<UsageWindow> Windows, string? PayAsYouGo) Parse(JsonElement root)
     {
         var windows = new List<UsageWindow>();
-        if (Json.Obj(root, "quota_snapshots") is not { } snapshots) return windows;
+        string? payAsYouGo = null;
+        if (Json.Obj(root, "quota_snapshots") is not { } snapshots) return (windows, null);
 
         var resetsAt = Json.Time(root, "quota_reset_date_utc");
         foreach (var quota in snapshots.EnumerateObject())
         {
             var q = quota.Value;
             if (q.ValueKind != JsonValueKind.Object) continue;
-            if (q.TryGetProperty("unlimited", out var unlimited) && unlimited.ValueKind == JsonValueKind.True) continue;
+            if (Json.Bool(q, "unlimited") == true) continue;
             if (Json.Num(q, "percent_remaining") is not { } remainingPct) continue;
 
-            string? detail = null;
-            if (Json.Num(q, "entitlement") is { } entitlement and > 0 && Json.Num(q, "remaining") is { } remaining)
-                detail = $"{entitlement - remaining:N0} of {entitlement:N0} used";
+            var credits = Json.Bool(q, "token_based_billing") == true;
+            var entitlement = Math.Max(0, Json.Num(q, "entitlement") ?? 0);
+            var budget = Math.Max(0, Json.Num(q, "overage_entitlement") ?? 0);
+            var overage = Math.Max(0, Json.Num(q, "overage_count") ?? 0);
+            var remaining = Json.Num(q, "remaining");
+            var includedUsed = remaining is { } r ? entitlement - Math.Max(0, r) : entitlement * (100 - remainingPct) / 100;
+            // Whether credits_used already counts overage isn't documented, so take whichever is larger.
+            var used = Math.Max(Json.Num(q, "credits_used") ?? 0, includedUsed + overage);
+            var limit = entitlement + budget;
+            string Amount(double v) => credits ? $"${v / 100:N2}" : $"{v:N0}";
 
-            var label = quota.Name == "premium_interactions" ? "Premium requests" : quota.Name.Replace('_', ' ');
-            windows.Add(new UsageWindow(label, 100 - remainingPct, resetsAt, detail));
+            // Pay-as-you-go seats have no allowance: percent_remaining reads 0, which isn't "all used".
+            if (limit <= 0)
+            {
+                if (used > 0) payAsYouGo = $"Pay as you go: {Amount(used)} used this month.";
+                continue;
+            }
+
+            var detail = $"{Amount(Math.Min(used, limit))} of {Amount(limit)} used";
+            if (budget > 0) detail += $" ({Amount(entitlement)} included + {Amount(budget)} budget)";
+            if (used > limit) detail += $", +{Amount(used - limit)} over";
+            else if (used >= limit && Json.Bool(q, "overage_permitted") != true) detail += ", limit reached";
+
+            var label = quota.Name == "premium_interactions"
+                ? credits ? "AI credits" : "Premium requests"
+                : quota.Name.Replace('_', ' ');
+            windows.Add(new UsageWindow(label, Math.Clamp(used / limit * 100, 0, 100), resetsAt, detail));
         }
-        return windows;
+        return (windows, payAsYouGo);
     }
 
     static async Task<string?> GetTokenAsync(string gh, CancellationToken ct)
